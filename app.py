@@ -3,11 +3,14 @@ import hashlib
 import datetime
 from collections import Counter
 
-def split_md5(hash_str):
-    part_length = len(hash_str) // 3
-    parts = [hash_str[i * part_length: (i + 1) * part_length] for i in range(3)]
-    numbers = [(int(part, 16) % 6) + 1 for part in parts]
-    return numbers, sum(numbers)
+def extract_numbers_from_md5(md5_hash):
+    number = int(md5_hash, 16)
+    num1 = (number % 6) + 1
+    number //= 10
+    num2 = (number % 6) + 1
+    number //= 223
+    num3 = (number % 6) + 1
+    return [num1, num2, num3], num1 + num2 + num3
 
 def analyze_result(numbers):
     count = Counter(numbers)
