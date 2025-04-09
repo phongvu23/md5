@@ -12,17 +12,19 @@ def extract_numbers_from_md5(md5_hash):
     num3 = (number % 6) + 1
     return [num1, num2, num3], num1 + num2 + num3
 
+
 def analyze_result(numbers):
     count = Counter(numbers)
     if 3 in count.values():
         return "Khả năng có Bão bất kỳ"
     elif 2 in count.values():
-        return "Khả năng có bộ đôi bất kỳ "
+        return "Khả năng có bộ đôi bất kỳ"
     return "Không có đặc biệt"
+
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-users = {"Phongvu": hashlib.sha256("123".encode()).hexdigest()}  # Tài khoản admin mặc định
+users = {"Phongvu": {"password": hashlib.sha256("123".encode()).hexdigest(), "vip_level": None}}  # Tài khoản admin mặc định
 recent_results = []  # Lưu 20 kết quả gần nhất
 comments = []  # Lưu bình luận
 
@@ -34,7 +36,7 @@ def home():
 def login():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "").strip()
-    if username in users and users[username] == hashlib.sha256(password.encode()).hexdigest():
+    if username in users and users[username]["password"] == hashlib.sha256(password.encode()).hexdigest():
         session["user"] = username
         return redirect(url_for("index"))
     return "Sai tên đăng nhập hoặc mật khẩu!"
@@ -43,6 +45,37 @@ def login():
 def logout():
     session.pop("user", None)
     return redirect(url_for("index"))
+
+@app.route("/register", methods=["POST"])
+def register():
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "").strip()
+
+    if username in users:
+        return "Tên đăng nhập đã tồn tại!", 400
+
+    users[username] = {
+        "password": hashlib.sha256(password.encode()).hexdigest(),
+        "vip_level": None  # Mức VIP khởi tạo là None
+    }
+    return "Đăng ký thành công!", 201
+
+@app.route("/set_vip", methods=["POST"])
+def set_vip():
+    if "user" not in session or session["user"] != "Phongvu":  # Chỉ cho phép admin thay đổi
+        return "Chỉ admin mới có thể thay đổi chế độ VIP!", 403
+    
+    username = request.form.get("username", "").strip()
+    vip_level = request.form.get("vip_level", "").strip()
+
+    if username not in users:
+        return "Người dùng không tồn tại!", 404
+
+    if vip_level not in ['VIP 1', 'VIP 2', 'VIP 3']:
+        return "Mức VIP không hợp lệ!", 400
+
+    users[username]["vip_level"] = vip_level
+    return "Mức VIP đã được cập nhật!", 200
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -105,7 +138,8 @@ def index():
         analysis=session.get("analysis"),
         recent_results=recent_results,
         comments=comments,
-        current_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        current_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        current_user=session.get("user")
     )
 
 HTML_TEMPLATE = """
@@ -137,19 +171,37 @@ HTML_TEMPLATE = """
     {% if 'user' not in session %}
         <h2>Đăng nhập</h2>
         <form method="post" action="/login">
-            <input type="text" name="username" required>
-            <input type="password" name="password" required>
+            <input type="text" name="username" required placeholder="Tên đăng nhập">
+            <input type="password" name="password" required placeholder="Mật khẩu">
             <button type="submit">Đăng nhập</button>
+        </form>
+        <h2>Đăng ký tài khoản</h2>
+        <form method="post" action="/register">
+            <input type="text" name="username" required placeholder="Tên đăng nhập mới">
+            <input type="password" name="password" required placeholder="Mật khẩu mới">
+            <button type="submit">Đăng ký</button>
         </form>
     {% else %}
         <h2>Chào mừng, {{ session['user'] }}! <a href="/logout">(thoát)</a></h2>
         <form method="post" action="/predict">
-            <input type="text" name="hash_input" required>
+            <input type="text" name="hash_input" required placeholder="Nhập chuỗi MD5">
             <button type="submit">Dự đoán</button>
         </form>
         <form method="post" action="/clear">
             <button type="submit">Xóa Kết Quả</button>
         </form>
+        {% if session['user'] == 'Phongvu' %}
+            <h2>Thay đổi mức VIP của người dùng</h2>
+            <form method="post" action="/set_vip">
+                <input type="text" name="username" required placeholder="Tên người dùng">
+                <select name="vip_level" required>
+                    <option value="VIP 1">VIP 1</option>
+                    <option value="VIP 2">VIP 2</option>
+                    <option value="VIP 3">VIP 3</option>
+                </select>
+                <button type="submit">Cập nhật mức VIP</button>
+            </form>
+        {% endif %}
         {% if result %}
             <h3>Kết quả: {{ total }} ({{ display_result }})</h3>
             <h3>Ba số: {{ result[0] }}, {{ result[1] }}, {{ result[2] }}</h3>
