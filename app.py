@@ -4,7 +4,7 @@ import datetime
 from collections import Counter
 
 def split_md5(hash_str):
-    part_length = len(hash_str) // 15
+    part_length = len(hash_str) // 3
     parts = [hash_str[i * part_length: (i + 1) * part_length] for i in range(3)]
     numbers = [(int(part, 16) % 6) + 1 for part in parts]
     return numbers, sum(numbers)
@@ -19,7 +19,7 @@ def analyze_result(numbers):
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-users = {"Phongvu": hashlib.sha256("1230".encode()).hexdigest()}  # Tài khoản admin mặc định
+users = {"Phongvu": hashlib.sha256("123".encode()).hexdigest()}  # Tài khoản admin mặc định
 recent_results = []  # Lưu 20 kết quả gần nhất
 comments = []  # Lưu bình luận
 
@@ -109,7 +109,7 @@ HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>KEY 15</title>
+    <title>KEY 3</title>
     <style>
         .red { color: red; font-weight: bold; }
         .green { color: green; font-weight: bold; }
@@ -129,7 +129,7 @@ HTML_TEMPLATE = """
     </style>
 </head>
 <body>
-    <marquee style="font-size: 20px; color: red; font-weight: bold;">Md5   - {{ current_time }}</marquee>
+    <marquee style="font-size: 20px; color: red; font-weight: bold;">TOOL CHECK  KEY   - {{ current_time }}</marquee>
     <marquee style="font-size: 20px; color: blue; font-weight: bold;">Chúc Bạn May Mắn</marquee>
     {% if 'user' not in session %}
         <h2>Đăng nhập</h2>
@@ -161,7 +161,7 @@ HTML_TEMPLATE = """
             </ul>
         {% endif %}
     {% endif %}
-    <div class="blinking">...... v.1.0 ........</div>
+    <div class="blinking">v1.0</div>
 </body>
 </html>
 """
