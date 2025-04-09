@@ -94,7 +94,7 @@ def predict():
         max_predictions = float('inf')  # Không giới hạn
 
     if user_data["predictions"] >= max_predictions:
-        return "Bạn đã vượt quá số lần dự đoán tối đa!", 403
+        return "Bạn đã vượt quá số lần dự đoán tối đa!liện hệ admin để nâng cấp Vip 0862186198", 403
 
     hash_input = request.form.get("hash_input", "").strip()
     if not hash_input or len(hash_input) != 32:
