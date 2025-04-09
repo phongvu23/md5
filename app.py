@@ -12,7 +12,6 @@ def extract_numbers_from_md5(md5_hash):
     num3 = (number % 6) + 1
     return [num1, num2, num3], num1 + num2 + num3
 
-
 def analyze_result(numbers):
     count = Counter(numbers)
     if 3 in count.values():
@@ -21,10 +20,11 @@ def analyze_result(numbers):
         return "Khả năng có bộ đôi bất kỳ"
     return "Không có đặc biệt"
 
-
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-users = {"Phongvu": {"password": hashlib.sha256("123".encode()).hexdigest(), "vip_level": None}}  # Tài khoản admin mặc định
+users = {
+    "Phongvu": {"password": hashlib.sha256("123".encode()).hexdigest(), "vip_level": None, "predictions": 0},  # Tài khoản admin mặc định
+}
 recent_results = []  # Lưu 20 kết quả gần nhất
 comments = []  # Lưu bình luận
 
@@ -56,7 +56,8 @@ def register():
 
     users[username] = {
         "password": hashlib.sha256(password.encode()).hexdigest(),
-        "vip_level": None  # Mức VIP khởi tạo là None
+        "vip_level": None,  # Mức VIP khởi tạo là None
+        "predictions": 0    # Số lần dự đoán khởi tạo
     }
     return "Đăng ký thành công!", 201
 
@@ -81,7 +82,20 @@ def set_vip():
 def predict():
     if "user" not in session:
         return redirect(url_for("index"))
-    
+
+    username = session["user"]
+    user_data = users[username]
+
+    # Kiểm tra số lần dự đoán theo cấp độ VIP
+    max_predictions = 15  # Mặc định cho người dùng không có VIP
+    if user_data["vip_level"] == "VIP 1" or user_data["vip_level"] == "VIP 2":
+        max_predictions = 50
+    elif user_data["vip_level"] == "VIP 3":
+        max_predictions = float('inf')  # Không giới hạn
+
+    if user_data["predictions"] >= max_predictions:
+        return "Bạn đã vượt quá số lần dự đoán tối đa!", 403
+
     hash_input = request.form.get("hash_input", "").strip()
     if not hash_input or len(hash_input) != 32:
         return "Lỗi: Vui lòng nhập đúng chuỗi MD5 hợp lệ!"
@@ -90,6 +104,9 @@ def predict():
     display_result = "X" if total < 11 else "T"
     analysis = analyze_result(result)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Cập nhật số lần dự đoán
+    user_data["predictions"] += 1
     
     session.update({
         "result": result,
