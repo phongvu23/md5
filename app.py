@@ -67,9 +67,7 @@ def register():
 
 @app.route("/set_vip", methods=["POST"])
 def set_vip():
-    if "user" not in session or session["user"] != "Phongvu":  # Chỉ cho phép admin thay đổi
-        return "Chỉ admin mới có thể thay đổi chế độ VIP!", 403
-        users = {
+    if users = {
     "Phongvu": {
         "password": hashlib.sha256("123".encode()).hexdigest(),  # Mã hóa mật khẩu
         "vip_level": None,
