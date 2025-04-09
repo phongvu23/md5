@@ -27,6 +27,14 @@ user_ips = {}  # Lưu trữ địa chỉ IP đã sử dụng để đăng ký
 recent_results = []  # Lưu 20 kết quả gần nhất
 comments = []  # Lưu bình luận
 
+# Khởi tạo tài khoản admin
+if "Phongvu" not in users:
+    users["Phongvu"] = {
+        "password": hashlib.sha256("123".encode()).hexdigest(),
+        "vip_level": None,
+        "predictions": 0
+    }
+
 @app.route("/")
 def home():
     return redirect(url_for("index"))
@@ -67,13 +75,8 @@ def register():
 
 @app.route("/set_vip", methods=["POST"])
 def set_vip():
-    if users = {
-    "Phongvu": {
-        "password": hashlib.sha256("123".encode()).hexdigest(),  # Mã hóa mật khẩu
-        "vip_level": None,
-        "predictions": 0
-    }
-}
+    if "user" not in session or session["user"] != "Phongvu":  # Chỉ cho phép admin thay đổi
+        return "Chỉ admin mới có thể thay đổi chế độ VIP!", 403
     
     username = request.form.get("username", "").strip()
     vip_level = request.form.get("vip_level", "").strip()
