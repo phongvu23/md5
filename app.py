@@ -53,7 +53,7 @@ def predict():
     if not hash_input or len(hash_input) != 32:
         return "Lỗi: Vui lòng nhập đúng chuỗi MD5 hợp lệ!"
     
-    result, total = split_md5(hash_input)
+    result, total = extract_numbers_from_md5(hash_input)
     display_result = "X" if total < 11 else "T"
     analysis = analyze_result(result)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
