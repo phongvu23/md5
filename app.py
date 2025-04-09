@@ -132,8 +132,8 @@ HTML_TEMPLATE = """
     </style>
 </head>
 <body>
-    <marquee style="font-size: 20px; color: red; font-weight: bold;">TOOL CHECK  KEY   - {{ current_time }}</marquee>
-    <marquee style="font-size: 20px; color: blue; font-weight: bold;">Chúc Bạn May Mắn</marquee>
+    <marquee style="font-size: 20px; color: red; font-weight: bold;">demo 1.0   - {{ current_time }}</marquee>
+    <marquee style="font-size: 20px; color: blue; font-weight: bold;">demo1.0</marquee>
     {% if 'user' not in session %}
         <h2>Đăng nhập</h2>
         <form method="post" action="/login">
@@ -142,7 +142,7 @@ HTML_TEMPLATE = """
             <button type="submit">Đăng nhập</button>
         </form>
     {% else %}
-        <h2>Chào mừng, {{ session['user'] }}! <a href="/logout">(Đăng xuất)</a></h2>
+        <h2>Chào mừng, {{ session['user'] }}! <a href="/logout">(thoát)</a></h2>
         <form method="post" action="/predict">
             <input type="text" name="hash_input" required>
             <button type="submit">Dự đoán</button>
