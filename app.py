@@ -19,7 +19,7 @@ def analyze_result(numbers):
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-users = {"Phongvu": hashlib.sha256("123".encode()).hexdigest()}  # Tài khoản admin mặc định
+users = {"Phongvu": hashlib.sha256("1230".encode()).hexdigest()}  # Tài khoản admin mặc định
 recent_results = []  # Lưu 20 kết quả gần nhất
 comments = []  # Lưu bình luận
 
@@ -161,7 +161,7 @@ HTML_TEMPLATE = """
             </ul>
         {% endif %}
     {% endif %}
-    <div class="blinking">KỶ LUẬT LÀ THẮNG</div>
+    <div class="blinking">...... v.1.0 ........</div>
 </body>
 </html>
 """
