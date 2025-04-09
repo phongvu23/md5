@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: k15-md5
+    env: python
+    buildCommand: ""
+    startCommand: python app.py
