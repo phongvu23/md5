@@ -168,7 +168,8 @@ def index():
         recent_results=recent_results,
         comments=comments,
         current_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        current_user=session.get("user")
+        current_user=session.get("user"),
+        users=users  # Gửi dictionary users để truy cập thông tin về mức VIP
     )
 
 HTML_TEMPLATE = """
@@ -211,7 +212,7 @@ HTML_TEMPLATE = """
             <button type="submit">Đăng ký</button>
         </form>
     {% else %}
-        <h2>Chào mừng, {{ session['user'] }}! <a href="/logout">(thoát)</a></h2>
+        <h2>Chào mừng, {{ session['user'] }}! (Mức VIP: {{ users[session['user']].get('vip_level', 'Không có') }}) <a href="/logout">(thoát)</a></h2>
         <form method="post" action="/predict">
             <input type="text" name="hash_input" required placeholder="Nhập chuỗi MD5">
             <button type="submit">Dự đoán</button>
