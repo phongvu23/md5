@@ -22,9 +22,8 @@ def analyze_result(numbers):
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
-users = {
-    "Phongvu": {"password": hashlib.sha256("123".encode()).hexdigest(), "vip_level": None, "predictions": 0},  # Tài khoản admin mặc định
-}
+users = {}  # Tạo Users dictionary
+user_ips = {}  # Lưu trữ địa chỉ IP đã sử dụng để đăng ký
 recent_results = []  # Lưu 20 kết quả gần nhất
 comments = []  # Lưu bình luận
 
@@ -50,15 +49,20 @@ def logout():
 def register():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "").strip()
+    user_ip = request.remote_addr  # Lấy địa chỉ IP của người dùng
 
     if username in users:
         return "Tên đăng nhập đã tồn tại!", 400
+
+    if user_ip in user_ips:
+        return "Một địa chỉ IP chỉ có thể đăng ký một tài khoản!", 403
 
     users[username] = {
         "password": hashlib.sha256(password.encode()).hexdigest(),
         "vip_level": None,  # Mức VIP khởi tạo là None
         "predictions": 0    # Số lần dự đoán khởi tạo
     }
+    user_ips[user_ip] = username  # Lưu trữ địa chỉ IP và người dùng đã đăng ký
     return "Đăng ký thành công!", 201
 
 @app.route("/set_vip", methods=["POST"])
@@ -94,7 +98,7 @@ def predict():
         max_predictions = float('inf')  # Không giới hạn
 
     if user_data["predictions"] >= max_predictions:
-        return "Bạn đã vượt quá số lần dự đoán tối đa!liện hệ admin để nâng cấp Vip 0862186198", 403
+        return "Bạn đã vượt quá số lần dự đoán tối đa!", 403
 
     hash_input = request.form.get("hash_input", "").strip()
     if not hash_input or len(hash_input) != 32:
