@@ -24,7 +24,7 @@ def extract_numbers_from_md5(md5_hash):
 # Hàm tách chuỗi MD5 để lấy 3 số
 def split_md5(hash_str):
     part_length = len(hash_str) // 15
-    parts = [hash_str[i * part_length: (i + 1) * part_length] for i in range(3)]
+    parts = [hash_str[i * part_length: (i + 2) * part_length] for i in range(3)]
     numbers = [(int(part, 16) % 6) + 1 for part in parts]
     return numbers, sum(numbers)
 
@@ -127,14 +127,14 @@ def predict():
     username = session["user"]
     user_data = users[username]
     
-    max_predictions = 15  # Default
+    max_predictions = 10  # Default
     if user_data["vip_level"] in ["VIP 1", "VIP 2"]:
         max_predictions = 50
     elif user_data["vip_level"] == "VIP 3":
         max_predictions = float('inf')
 
     if user_data["predictions"] >= max_predictions:
-        return redirect(url_for("index", error="Bạn đã vượt quá số lần dự đoán tối đa!"))
+        return redirect(url_for("index", error="Bạn đã vượt quá số lần dự đoán tối đa!liên hệ admin để kích hoạt Vip"))
 
     hash_input = request.form.get("hash_input", "").strip()
     if not hash_input or len(hash_input) != 32 or not all(c in '0123456789abcdef' for c in hash_input.lower()):
@@ -266,7 +266,7 @@ HTML_TEMPLATE = """
             <button type="submit">Đăng ký</button>
         </form>
     {% else %}
-        <h2>Chào mừng, {{ current_user }}! (Mức VIP: {{ users[current_user].get('vip_level', 'Không có') }}) <a href="/logout">(thoát)</a></h2>
+        <h2>Chào mừng, {{ current_user }}! ( VIP: {{ users[current_user].get('vip_level', 'V0') }}) <a href="/logout">(thoát)</a></h2>
         <form method="post" action="/predict">
             <input type="text" name="hash_input" required placeholder="Nhập chuỗi MD5">
             <button type="submit">Dự đoán</button>
