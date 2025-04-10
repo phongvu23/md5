@@ -4,14 +4,7 @@ import hashlib
 import datetime
 from collections import Counter, deque
 
-# Hàm tách chuỗi MD5
-def split_md5(hash_str):
-    part_length = len(hash_str) // 3
-    parts = [hash_str[i * part_length: (i + 1) * part_length] for i in range(3)]
-    numbers = [(int(part, 16) % 6) + 1 for part in parts]
-    return numbers, sum(numbers)
-
-# Hàm băm chuỗi đầu vào bằng SHA-256 và trả về 3 số xúc xắc
+# Hàm tách chuỗi MD5 theo yêu cầu của bạn
 def split_md5(hash_str):
     part1 = hash_str[1:10]   # Lấy 2 ký tự từ vị trí 8
     part2 = hash_str[10:21]  # Lấy 2 ký tự từ vị trí 10
@@ -142,30 +135,21 @@ def predict():
         return redirect(url_for("index", error="Lỗi: Vui lòng nhập đúng chuỗi MD5 hợp lệ!"))
 
     # Sử dụng hàm split_md5 để tách chuỗi MD5
-    result_md5, total_md5 = split_md5(hash_input)
-    display_result = "X" if total_md5 < 11 else "T"
-    analysis_md5 = analyze_result(result_md5)
-
-    # Sử dụng hàm hash_to_dice_numbers
-    dice_numbers, total_dice = hash_to_dice_numbers(hash_input)
-    display_dice_result = "X" if total_dice < 11 else "T"
-    analysis_dice = analyze_result(dice_numbers)
+    result, total = split_md5(hash_input)
+    display_result = "X" if total < 11 else "T"
+    analysis = analyze_result(result)
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     user_data["predictions"] += 1
     session.update({
-        "result_md5": result_md5,
-        "total_md5": total_md5,
-        "display_result_md5": display_result,
-        "analysis_md5": analysis_md5,
-        "dice_numbers": dice_numbers,
-        "total_dice": total_dice,
-        "display_result_dice": display_dice_result,
-        "analysis_dice": analysis_dice
+        "result": result,
+        "total": total,
+        "display_result": display_result,
+        "analysis": analysis
     })
 
-    recent_results.append((timestamp, result_md5, total_md5, display_result, analysis_md5, dice_numbers, total_dice, display_dice_result, analysis_dice))
+    recent_results.append((timestamp, result, total, display_result, analysis))
 
     # Cập nhật tổng số lần dự đoán và số lần xuất hiện của T và X.
     total_predictions += 1
@@ -184,7 +168,7 @@ def predict():
 
 @app.route("/clear", methods=["POST"])
 def clear():
-    for key in ["result_md5", "total_md5", "display_result_md5", "analysis_md5", "dice_numbers", "total_dice", "display_result_dice", "analysis_dice", "prob_x", "prob_t"]:
+    for key in ["result", "total", "display_result", "analysis", "prob_x", "prob_t"]:
         session.pop(key, None)
     recent_results.clear()
     return redirect(url_for("index"))
@@ -210,14 +194,10 @@ def clear_comments():
 def index():
     return render_template_string(
         HTML_TEMPLATE,
-        result_md5=session.get("result_md5"),
-        total_md5=session.get("total_md5"),
-        display_result_md5=session.get("display_result_md5"),
-        analysis_md5=session.get("analysis_md5"),
-        dice_numbers=session.get("dice_numbers"),
-        total_dice=session.get("total_dice"),
-        display_result_dice=session.get("display_result_dice"),
-        analysis_dice=session.get("analysis_dice"),
+        result=session.get("result"),
+        total=session.get("total"),
+        display_result=session.get("display_result"),
+        analysis=session.get("analysis"),
         recent_results=recent_results,
         comments=comments,
         current_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -295,22 +275,18 @@ HTML_TEMPLATE = """
                 <button type="submit">Cập nhật mức VIP</button>
             </form>
         {% endif %}
-        {% if result_md5 %}
-            <h3>Kết quả MD5: {{ total_md5 }} ({{ display_result_md5 }})</h3>
-            <h3>Ba số MD5: {{ result_md5[0] }}, {{ result_md5[1] }}, {{ result_md5[2] }}</h3>
-            <h3 style="color: blue;">{{ analysis_md5 }}</h3>
-        {% endif %}
-        {% if dice_numbers %}
-            <h3>Kết quả SHA-256: {{ total_dice }} ({{ display_result_dice }})</h3>
-            <h3>Ba số SHA-256: {{ dice_numbers[0] }}, {{ dice_numbers[1] }}, {{ dice_numbers[2] }}</h3>
-            <h3 style="color: blue;">{{ analysis_dice }}</h3>
+        {% if result %}
+            <h3>Kết quả: {{ total }} ({{ display_result }})</h3>
+            <h3>Ba số: {{ result[0] }}, {{ result[1] }}, {{ result[2] }}</h3>
+            <h3 style="color: blue;">{{ analysis }}</h3>
+            <h3>Xác suất X: {{ prob_x|round(2) }}%</h3>
+            <h3>Xác suất T: {{ prob_t|round(2) }}%</h3>
         {% endif %}
         {% if recent_results %}
             <h3>20 Kết Quả Gần Nhất</h3>
             <ul>
                 {% for res in recent_results %}
-                    <li>{{ res[0] }} - MD5: Ba số: {{ res[1][0] }}, {{ res[1][1] }}, {{ res[1][2] }} - Tổng: {{ res[2] }} ({{ res[3] }}) - {{ res[4] }} 
-                    | SHA-256: Ba số: {{ res[5][0] }}, {{ res[5][1] }}, {{ res[5][2] }} - Tổng: {{ res[6] }} ({{ res[7] }}) - {{ res[8] }}</li>
+                    <li>{{ res[0] }} - Ba số: {{ res[1][0] }}, {{ res[1][1] }}, {{ res[1][2] }} - Tổng: {{ res[2] }} ({{ res[3] }}) - {{ res[4] }}</li>
                 {% endfor %}
             </ul>
         {% endif %}
