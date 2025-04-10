@@ -289,7 +289,7 @@ HTML_TEMPLATE = """
         {% if result %}
             <h3>Kết quả: {{ total }} ({{ display_result }})</h3>
             <h3>Ba số: {{ result[0] }}, {{ result[1] }}, {{ result[2] }}</h3>
-            <h3>Số trích xuất: {{ extracted_numbers[0] }}, {{ extracted_numbers[1] }}, {{ extracted_numbers[2] }}</h3>
+            <h3>Số trích xuất: {{ extracted_numbers[1] }}, {{ extracted_numbers[2] }}, {{ extracted_numbers[3] }}</h3>
             <h3 style="color: blue;">{{ analysis }}</h3>
             <h3>Xác suất X: {{ prob_x|round(2) }}%</h3>
             <h3>Xác suất T: {{ prob_t|round(2) }}%</h3>
