@@ -12,17 +12,22 @@ def split_md5(hash_str):
     return numbers, sum(numbers)
 
 # Hàm băm chuỗi đầu vào bằng SHA-256 và trả về 3 số xúc xắc
-def hash_to_dice_numbers(seed):
-    # Băm chuỗi đầu vào bằng SHA-256
-    hash_str = hashlib.sha256(seed.encode()).hexdigest()
+def split_md5(hash_str):
+    part1 = hash_str[1:10]   # Lấy 2 ký tự từ vị trí 8
+    part2 = hash_str[10:21]  # Lấy 2 ký tự từ vị trí 10
+    part3 = hash_str[21:32]  # Lấy 2 ký tự từ vị trí 12
 
-    # Tách thành 3 số trong khoảng 1-6
-    numbers = [int(hash_str[i:i+2], 16) % 6 + 1 for i in range(0, 24, 8)]
+    int1 = int(part1, 16)  # Chuyển hệ 16 sang số nguyên
+    int2 = int(part2, 16)
+    int3 = int(part3, 16)
+
+    numbers = [
+        (int1 % 6) + 1,  # Random từ 1-6
+        (int2 % 6) + 1,
+        (int3 % 6) + 1
+    ]
     
-    # Tính tổng
-    total = sum(numbers)
-    
-    return numbers, total
+    return numbers, sum(numbers)
 
 # Chức năng phân tích kết quả
 def analyze_result(numbers):
