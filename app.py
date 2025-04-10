@@ -24,7 +24,7 @@ def extract_numbers_from_md5(md5_hash):
 # Hàm tách chuỗi MD5 để lấy 3 số
 def split_md5(hash_str):
     part_length = len(hash_str) // 15
-    parts = [hash_str[i * part_length: (i + 2) * part_length] for i in range(3)]
+    parts = [hash_str[i * part_length: (i + 5) * part_length] for i in range(3)]
     numbers = [(int(part, 16) % 6) + 1 for part in parts]
     return numbers, sum(numbers)
 
