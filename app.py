@@ -4,25 +4,31 @@ import hashlib
 import datetime
 from collections import Counter, deque
 
-# Hàm tách chuỗi MD5 theo yêu cầu của bạn
-def split_md5(hash_str):
-    part1 = hash_str[1:10]   # Lấy 2 ký tự từ vị trí 8
-    part2 = hash_str[10:21]  # Lấy 2 ký tự từ vị trí 10
-    part3 = hash_str[21:32]  # Lấy 2 ký tự từ vị trí 12
+# Hàm chiết xuất 3 số từ chuỗi MD5
+def extract_numbers_from_md5(md5_hash):
+    # Chuyển mã MD5 từ hexa sang số nguyên
+    number = int(md5_hash, 16)
 
-    int1 = int(part1, 16)  # Chuyển hệ 16 sang số nguyên
-    int2 = int(part2, 16)
-    int3 = int(part3, 16)
-
-    numbers = [
-        (int1 % 6) + 1,  # Random từ 1-6
-        (int2 % 6) + 1,
-        (int3 % 6) + 1
-    ]
+    # Lấy 3 số từ số nguyên này, mỗi số nằm trong khoảng từ 1 đến 6
+    num1 = (number % 6) + 1  # Lấy số trong khoảng từ 1-6
+    number //= 10             # Xóa chữ số cuối
     
+    num2 = (number % 6) + 1   # Lấy số trong khoảng từ 1-6
+    number //= 223            # Xóa chữ số tiếp theo
+    
+    num3 = (number % 6) + 1   # Lấy số trong khoảng từ 1-6
+    number //= 14              # Xóa chữ số tiếp theo
+    
+    return num1, num2, num3
+
+# Hàm tách chuỗi MD5 để lấy 3 số
+def split_md5(hash_str):
+    part_length = len(hash_str) // 15
+    parts = [hash_str[i * part_length: (i + 1) * part_length] for i in range(3)]
+    numbers = [(int(part, 16) % 6) + 1 for part in parts]
     return numbers, sum(numbers)
 
-# Chức năng phân tích kết quả
+# Hàm phân tích chiều
 def analyze_result(numbers):
     count = Counter(numbers)
     if 3 in count.values():
@@ -139,6 +145,9 @@ def predict():
     display_result = "X" if total < 11 else "T"
     analysis = analyze_result(result)
 
+    # Sử dụng hàm extract_numbers_from_md5
+    extracted_numbers = extract_numbers_from_md5(hash_input)
+
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     user_data["predictions"] += 1
@@ -146,10 +155,11 @@ def predict():
         "result": result,
         "total": total,
         "display_result": display_result,
-        "analysis": analysis
+        "analysis": analysis,
+        "extracted_numbers": extracted_numbers
     })
 
-    recent_results.append((timestamp, result, total, display_result, analysis))
+    recent_results.append((timestamp, result, total, display_result, analysis, extracted_numbers))
 
     # Cập nhật tổng số lần dự đoán và số lần xuất hiện của T và X.
     total_predictions += 1
@@ -168,7 +178,7 @@ def predict():
 
 @app.route("/clear", methods=["POST"])
 def clear():
-    for key in ["result", "total", "display_result", "analysis", "prob_x", "prob_t"]:
+    for key in ["result", "total", "display_result", "analysis", "prob_x", "prob_t", "extracted_numbers"]:
         session.pop(key, None)
     recent_results.clear()
     return redirect(url_for("index"))
@@ -198,6 +208,7 @@ def index():
         total=session.get("total"),
         display_result=session.get("display_result"),
         analysis=session.get("analysis"),
+        extracted_numbers=session.get("extracted_numbers"),
         recent_results=recent_results,
         comments=comments,
         current_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -278,6 +289,7 @@ HTML_TEMPLATE = """
         {% if result %}
             <h3>Kết quả: {{ total }} ({{ display_result }})</h3>
             <h3>Ba số: {{ result[0] }}, {{ result[1] }}, {{ result[2] }}</h3>
+            <h3>Số trích xuất: {{ extracted_numbers[0] }}, {{ extracted_numbers[1] }}, {{ extracted_numbers[2] }}</h3>
             <h3 style="color: blue;">{{ analysis }}</h3>
             <h3>Xác suất X: {{ prob_x|round(2) }}%</h3>
             <h3>Xác suất T: {{ prob_t|round(2) }}%</h3>
