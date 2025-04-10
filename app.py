@@ -24,7 +24,7 @@ def extract_numbers_from_md5(md5_hash):
 # Hàm tách chuỗi MD5 để lấy 3 số
 def split_md5(hash_str):
     part_length = len(hash_str) // 15
-    parts = [hash_str[i * part_length: (i + 5) * part_length] for i in range(3)]
+    parts = [hash_str[i * part_length: (i + 1) * part_length] for i in range(3)]
     numbers = [(int(part, 16) % 6) + 1 for part in parts]
     return numbers, sum(numbers)
 
@@ -298,7 +298,7 @@ HTML_TEMPLATE = """
             <h3>20 Kết Quả Gần Nhất</h3>
             <ul>
                 {% for res in recent_results %}
-                    <li>{{ res[0] }} - Ba số: {{ res[1][0] }}, {{ res[1][1] }}, {{ res[1][2] }} - Tổng: {{ res[2] }} ({{ res[3] }}) - {{ res[4] }}</li>
+                    <li>{{ res[0] }} - Ba số: {{ res[1][0] }}, {{ res[1][1] }}, {{ res[1][2] }} - Tổng: {{ res[0] }} ({{ res[1] }}) - {{ res[2] }}</li>
                 {% endfor %}
             </ul>
         {% endif %}
