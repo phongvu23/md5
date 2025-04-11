@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string, redirect, url_for, session
+from flask import Flask, request, redirect, url_for, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import hashlib
 import datetime
@@ -9,23 +9,17 @@ def extract_numbers_from_md5(md5_hash):
     """
     Trích xuất 3 số từ mã MD5. Mỗi số nằm trong khoảng từ 1 đến 6.
     """
-    # Kiểm tra tính hợp lệ của mã MD5
     if not isinstance(md5_hash, str) or len(md5_hash) != 32:
         raise ValueError("Mã MD5 phải là chuỗi 32 ký tự hexa.")
-
-    # Chuyển mã MD5 từ hexa sang số nguyên
     try:
         number = int(md5_hash, 16)
     except ValueError:
         raise ValueError("Mã MD5 không hợp lệ, không thể chuyển đổi sang số nguyên.")
 
-    # Trích xuất các số trong khoảng từ 1 đến 6
     num1 = (number % 6) + 1
-    number //= 1000  # Giảm độ lớn của số để tiếp tục trích xuất
-
+    number //= 1000
     num2 = (number % 6) + 1
-    number //= 1000  # Tiếp tục giảm độ lớn
-
+    number //= 1000
     num3 = (number % 6) + 1
 
     return num1, num2, num3
@@ -50,25 +44,25 @@ app = Flask(__name__)
 app.secret_key = "supersecretkey"
 users = {}
 user_ips = {}
-recent_results = deque(maxlen=20)  # Lưu 20 kết quả gần nhất
-comments = []
+recent_results = deque(maxlen=20)
 
 # Dữ liệu để theo dõi xác suất
-total_predictions = 0
-total_x = 0
-total_t = 0
+statistics = {
+    "total_predictions": 0,
+    "total_x": 0,
+    "total_t": 0
+}
 
 # Khởi tạo tài khoản admin
-if "Phongvu" not in users:
-    users["Phongvu"] = {
-        "password": generate_password_hash("123"),
-        "vip_level": None,
-        "predictions": 0
-    }
+users["Phongvu"] = {
+    "password": generate_password_hash("123"),
+    "vip_level": None,
+    "predictions": 0
+}
 
 @app.route("/")
 def home():
-    return redirect(url_for("index"))
+    return jsonify({"message": "Welcome to the MD5 prediction app!"})
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -76,13 +70,13 @@ def login():
     password = request.form.get("password", "").strip()
     if username in users and check_password_hash(users[username]["password"], password):
         session["user"] = username
-        return redirect(url_for("index"))
-    return redirect(url_for("index", error="Sai tên đăng nhập hoặc mật khẩu!"))
+        return jsonify({"message": "Đăng nhập thành công!"})
+    return jsonify({"error": "Sai tên đăng nhập hoặc mật khẩu!"}), 401
 
 @app.route("/logout")
 def logout():
     session.pop("user", None)
-    return redirect(url_for("index"))
+    return jsonify({"message": "Đã đăng xuất!"})
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -91,10 +85,10 @@ def register():
     user_ip = request.remote_addr
 
     if username in users:
-        return redirect(url_for("index", error="Tên đăng nhập đã tồn tại!"))
+        return jsonify({"error": "Tên đăng nhập đã tồn tại!"}), 400
 
     if user_ip in user_ips:
-        return redirect(url_for("index", error="Một địa chỉ IP chỉ có thể đăng ký một tài khoản!"))
+        return jsonify({"error": "Một địa chỉ IP chỉ có thể đăng ký một tài khoản!"}), 400
 
     users[username] = {
         "password": generate_password_hash(password),
@@ -102,30 +96,29 @@ def register():
         "predictions": 0
     }
     user_ips[user_ip] = username
-    return redirect(url_for("index", success="Đăng ký thành công!"))
+    return jsonify({"message": "Đăng ký thành công!"})
 
 @app.route("/set_vip", methods=["POST"])
 def set_vip():
     if "user" not in session or session["user"] != "Phongvu":
-        return redirect(url_for("index", error="Chỉ admin mới có thể thay đổi chế độ VIP!"))
+        return jsonify({"error": "Chỉ admin mới có thể thay đổi chế độ VIP!"}), 403
     
     username = request.form.get("username", "").strip()
     vip_level = request.form.get("vip_level", "").strip()
 
     if username not in users:
-        return redirect(url_for("index", error="Người dùng không tồn tại!"))
+        return jsonify({"error": "Người dùng không tồn tại!"}), 404
 
     if vip_level not in ['VIP 1', 'VIP 2', 'VIP 3']:
-        return redirect(url_for("index", error="Mức VIP không hợp lệ!"))
+        return jsonify({"error": "Mức VIP không hợp lệ!"}), 400
 
     users[username]["vip_level"] = vip_level
-    return redirect(url_for("index", success="Mức VIP đã được cập nhật!"))
+    return jsonify({"message": "Mức VIP đã được cập nhật!"})
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    global total_predictions, total_x, total_t  # Đánh dấu để sử dụng biến toàn cục
     if "user" not in session:
-        return redirect(url_for("index"))
+        return jsonify({"error": "Bạn cần đăng nhập để dự đoán!"}), 403
 
     username = session["user"]
     user_data = users[username]
@@ -137,14 +130,18 @@ def predict():
         max_predictions = float('inf')
 
     if user_data["predictions"] >= max_predictions:
-        return redirect(url_for("index", error="Bạn đã vượt quá số lần dự đoán tối đa! Liên hệ admin để kích hoạt Vip"))
+        return jsonify({"error": "Bạn đã vượt quá số lần dự đoán tối đa!"}), 403
 
     hash_input = request.form.get("hash_input", "").strip()
     if not hash_input or len(hash_input) != 32 or not all(c in '0123456789abcdef' for c in hash_input.lower()):
-        return redirect(url_for("index", error="Lỗi: Vui lòng nhập đúng chuỗi MD5 hợp lệ!"))
+        return jsonify({"error": "Lỗi: Vui lòng nhập đúng chuỗi MD5 hợp lệ!"}), 400
 
     # Trích xuất kết quả từ MD5
-    result = extract_numbers_from_md5(hash_input)
+    try:
+        result = extract_numbers_from_md5(hash_input)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
     total = sum(result)
     display_result = "X" if total < 11 else "T"
     analysis = analyze_result(result)
@@ -152,29 +149,25 @@ def predict():
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     user_data["predictions"] += 1
-    session.update({
+    recent_results.append((timestamp, result, total, display_result, analysis))
+
+    # Cập nhật thống kê
+    statistics["total_predictions"] += 1
+    if display_result == "X":
+        statistics["total_x"] += 1
+    else:
+        statistics["total_t"] += 1
+    
+    # Tính xác suất
+    prob_x, prob_t = calculate_probabilities(statistics["total_x"], statistics["total_t"], statistics["total_predictions"])
+    
+    return jsonify({
         "result": result,
         "total": total,
         "display_result": display_result,
         "analysis": analysis,
+        "probabilities": {"X": prob_x, "T": prob_t}
     })
-
-    recent_results.append((timestamp, result, total, display_result, analysis))
-
-    # Cập nhật tổng số lần dự đoán và số lần xuất hiện của T và X.
-    total_predictions += 1
-    if display_result == "X":
-        total_x += 1
-    else:
-        total_t += 1
-    
-    # Tính xác suất
-    prob_x, prob_t = calculate_probabilities(total_x, total_t, total_predictions)
-    
-    session['prob_x'] = prob_x
-    session['prob_t'] = prob_t
-    
-    return redirect(url_for("index"))
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
