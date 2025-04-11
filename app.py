@@ -4,26 +4,7 @@ import hashlib
 import datetime
 from collections import Counter, deque
 
-# Hàm chiết xuất 3 số từ chuỗi MD5
-def extract_numbers_from_md5(md5_hash):
-    # Chuyển mã MD5 từ hexa sang số nguyên
-    number = int(md5_hash, 16)
-
-    # Lấy 3 số từ số nguyên này, mỗi số nằm trong khoảng từ 1 đến 6
-    num1 = (number % 6) + 1  # Lấy số trong khoảng từ 1-6
-    number //= 10             # Xóa chữ số cuối
-    
-    num2 = (number % 6) + 1   # Lấy số trong khoảng từ 1-6
-    number //= 223            # Xóa chữ số tiếp theo
-    
-    num3 = (number % 6) + 1   # Lấy số trong khoảng từ 1-6
-    number //= 14              # Xóa chữ số tiếp theo
-    
-    return num1, num2, num3
-
-# Hàm tách chuỗi MD5 để lấy 3 số
-import hashlib
-
+# Hàm trích xuất 3 số từ chuỗi MD5
 def extract_numbers_from_md5(md5_hash):
     """
     Trích xuất 3 số từ mã MD5. Mỗi số nằm trong khoảng từ 1 đến 6.
@@ -47,10 +28,9 @@ def extract_numbers_from_md5(md5_hash):
 
     num3 = (number % 6) + 1
 
-    # Trả về chuỗi kết quả dạng "num1-num2-num3"
-    return f"{num1}-{num2}-{num3}"
+    return num1, num2, num3
 
-# Hàm phân tích chiều
+# Hàm phân tích kết quả
 def analyze_result(numbers):
     count = Counter(numbers)
     if 3 in count.values():
@@ -59,17 +39,18 @@ def analyze_result(numbers):
         return "Khả năng có bộ đôi bất kỳ"
     return "Không có đặc biệt"
 
-# Hàm tính xác suất cho X và T
+# Hàm tính xác suất
 def calculate_probabilities(total_x, total_t, total_predictions):
     prob_x = (total_x / total_predictions) * 100 if total_predictions > 0 else 0
     prob_t = (total_t / total_predictions) * 100 if total_predictions > 0 else 0
     return prob_x, prob_t
 
+# Khởi tạo Flask app
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 users = {}
 user_ips = {}
-recent_results = deque(maxlen=20)  # Sử dụng deque để giữ 20 kết quả gần nhất
+recent_results = deque(maxlen=20)  # Lưu 20 kết quả gần nhất
 comments = []
 
 # Dữ liệu để theo dõi xác suất
@@ -156,19 +137,17 @@ def predict():
         max_predictions = float('inf')
 
     if user_data["predictions"] >= max_predictions:
-        return redirect(url_for("index", error="Bạn đã vượt quá số lần dự đoán tối đa!liên hệ admin để kích hoạt Vip"))
+        return redirect(url_for("index", error="Bạn đã vượt quá số lần dự đoán tối đa! Liên hệ admin để kích hoạt Vip"))
 
     hash_input = request.form.get("hash_input", "").strip()
     if not hash_input or len(hash_input) != 32 or not all(c in '0123456789abcdef' for c in hash_input.lower()):
         return redirect(url_for("index", error="Lỗi: Vui lòng nhập đúng chuỗi MD5 hợp lệ!"))
 
-    # Sử dụng hàm split_md5 để tách chuỗi MD5
-    result, total = split_md5(hash_input)
+    # Trích xuất kết quả từ MD5
+    result = extract_numbers_from_md5(hash_input)
+    total = sum(result)
     display_result = "X" if total < 11 else "T"
     analysis = analyze_result(result)
-
-    # Sử dụng hàm extract_numbers_from_md5
-    extracted_numbers = extract_numbers_from_md5(hash_input)
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -178,10 +157,9 @@ def predict():
         "total": total,
         "display_result": display_result,
         "analysis": analysis,
-        "extracted_numbers": extracted_numbers
     })
 
-    recent_results.append((timestamp, result, total, display_result, analysis, extracted_numbers))
+    recent_results.append((timestamp, result, total, display_result, analysis))
 
     # Cập nhật tổng số lần dự đoán và số lần xuất hiện của T và X.
     total_predictions += 1
@@ -197,138 +175,6 @@ def predict():
     session['prob_t'] = prob_t
     
     return redirect(url_for("index"))
-
-@app.route("/clear", methods=["POST"])
-def clear():
-    for key in ["result", "total", "display_result", "analysis", "prob_x", "prob_t", "extracted_numbers"]:
-        session.pop(key, None)
-    recent_results.clear()
-    return redirect(url_for("index"))
-
-@app.route("/comment", methods=["POST"])
-def comment():
-    if "user" not in session:
-        return redirect(url_for("index"))
-    
-    comment_text = request.form.get("comment_text", "").strip()
-    if comment_text:
-        comments.append(comment_text)
-        comments[:] = comments[-10:]  # Giới hạn bình luận gần nhất xuống 10
-
-    return redirect(url_for("index"))
-
-@app.route("/clear_comments", methods=["POST"])
-def clear_comments():
-    comments.clear()
-    return redirect(url_for("index"))
-
-@app.route("/index", methods=["GET", "POST"])
-def index():
-    return render_template_string(
-        HTML_TEMPLATE,
-        result=session.get("result"),
-        total=session.get("total"),
-        display_result=session.get("display_result"),
-        analysis=session.get("analysis"),
-        extracted_numbers=session.get("extracted_numbers"),
-        recent_results=recent_results,
-        comments=comments,
-        current_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        current_user=session.get("user"),
-        users=users,  # Gửi dictionary users để truy cập thông tin về mức VIP
-        error=request.args.get("error"),
-        success=request.args.get("success"),
-        prob_x=session.get('prob_x', 0),  # Xác suất của X
-        prob_t=session.get('prob_t', 0)   # Xác suất của T
-    )
-
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>KEY 3</title>
-    <style>
-        .red { color: red; font-weight: bold; }
-        .green { color: green; font-weight: bold; }
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0; }
-            100% { opacity: 1; }
-        }
-        .blinking {
-            font-size: 24px;
-            color: red;
-            font-weight: bold;
-            animation: blink 1s infinite;
-            text-align: center;
-            margin-top: 20px;
-        }
-    </style>
-</head>
-<body>
-    <marquee style="font-size: 20px; color: red; font-weight: bold;">demo 1.0   - {{ current_time }}</marquee>
-    <marquee style="font-size: 20px; color: blue; font-weight: bold;">demo1.0</marquee>
-    {% if error %}
-        <h3 class="red">{{ error }}</h3>
-    {% endif %}
-    {% if success %}
-        <h3 class="green">{{ success }}</h3>
-    {% endif %}
-    {% if 'user' not in session %}
-        <h2>Đăng nhập</h2>
-        <form method="post" action="/login">
-            <input type="text" name="username" required placeholder="Tên đăng nhập">
-            <input type="password" name="password" required placeholder="Mật khẩu">
-            <button type="submit">Đăng nhập</button>
-        </form>
-        <h2>Đăng ký tài khoản</h2>
-        <form method="post" action="/register">
-            <input type="text" name="username" required placeholder="Tên đăng nhập mới">
-            <input type="password" name="password" required placeholder="Mật khẩu mới">
-            <button type="submit">Đăng ký</button>
-        </form>
-    {% else %}
-        <h2>Chào mừng, {{ current_user }}! ( VIP: {{ users[current_user].get('vip_level', 'V0') }}) <a href="/logout">(thoát)</a></h2>
-        <form method="post" action="/predict">
-            <input type="text" name="hash_input" required placeholder="Nhập chuỗi MD5">
-            <button type="submit">Dự đoán</button>
-        </form>
-        <form method="post" action="/clear">
-            <button type="submit">Xóa Kết Quả</button>
-        </form>
-        {% if current_user == 'Phongvu' %}
-            <h2>Thay đổi mức VIP của người dùng</h2>
-            <form method="post" action="/set_vip">
-                <input type="text" name="username" required placeholder="Tên người dùng">
-                <select name="vip_level" required>
-                    <option value="VIP 1">VIP 1</option>
-                    <option value="VIP 2">VIP 2</option>
-                    <option value="VIP 3">VIP 3</option>
-                </select>
-                <button type="submit">Cập nhật mức VIP</button>
-            </form>
-        {% endif %}
-        {% if result %}
-            <h3>Kết quả: {{ total }} ({{ display_result }})</h3>
-            <h3>Ba số: {{ result[0] }}, {{ result[1] }}, {{ result[2] }}</h3>
-            <h3>Số trích xuất: {{ extracted_numbers[1] }}, {{ extracted_numbers[2] }}, {{ extracted_numbers[3] }}</h3>
-            <h3 style="color: blue;">{{ analysis }}</h3>
-            <h3>Xác suất X: {{ prob_x|round(2) }}%</h3>
-            <h3>Xác suất T: {{ prob_t|round(2) }}%</h3>
-        {% endif %}
-        {% if recent_results %}
-            <h3>20 Kết Quả Gần Nhất</h3>
-            <ul>
-                {% for res in recent_results %}
-                    <li>{{ res[0] }} - Ba số: {{ res[1][0] }}, {{ res[1][1] }}, {{ res[1][2] }} - Tổng: {{ res[0] }} ({{ res[1] }}) - {{ res[2] }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    {% endif %}
-    <div class="blinking">v1.0</div>
-</body>
-</html>
-"""
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
