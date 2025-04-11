@@ -22,11 +22,33 @@ def extract_numbers_from_md5(md5_hash):
     return num1, num2, num3
 
 # Hàm tách chuỗi MD5 để lấy 3 số
-def split_md5(hash_str):
-    part_length = len(hash_str) // 15
-    parts = [hash_str[i * part_length: (i + 1) * part_length] for i in range(3)]
-    numbers = [(int(part, 16) % 6) + 1 for part in parts]
-    return numbers, sum(numbers)
+import hashlib
+
+def extract_numbers_from_md5(md5_hash):
+    """
+    Trích xuất 3 số từ mã MD5. Mỗi số nằm trong khoảng từ 1 đến 6.
+    """
+    # Kiểm tra tính hợp lệ của mã MD5
+    if not isinstance(md5_hash, str) or len(md5_hash) != 32:
+        raise ValueError("Mã MD5 phải là chuỗi 32 ký tự hexa.")
+
+    # Chuyển mã MD5 từ hexa sang số nguyên
+    try:
+        number = int(md5_hash, 16)
+    except ValueError:
+        raise ValueError("Mã MD5 không hợp lệ, không thể chuyển đổi sang số nguyên.")
+
+    # Trích xuất các số trong khoảng từ 1 đến 6
+    num1 = (number % 6) + 1
+    number //= 1000  # Giảm độ lớn của số để tiếp tục trích xuất
+
+    num2 = (number % 6) + 1
+    number //= 1000  # Tiếp tục giảm độ lớn
+
+    num3 = (number % 6) + 1
+
+    # Trả về chuỗi kết quả dạng "num1-num2-num3"
+    return f"{num1}-{num2}-{num3}"
 
 # Hàm phân tích chiều
 def analyze_result(numbers):
